@@ -28,7 +28,7 @@ typedef struct _Member
     char* tel[SIZE_OF_MEMBER_TEL];
     MemberStatus status;  // 이용자의 현재 상태를 나타냄
     size_t ID;  // 이용자의 ID를 저장함.
-    char* PW[SIZE_OF_MEMBER_TEL];    // 이용자의 PW를 저장함.
+    char* PW[SIZE_OF_MEMBER_PW];    // 이용자의 PW를 저장함.
 }Member;
 
 // 거래 내역의 한 행을 구성함.
@@ -49,7 +49,7 @@ typedef struct _Ledger
     size_t ledgerMaxLen;    // 할당받은 원장의 길이를 저장함
 }Ledger;
 
-// Member의 메소드 구현
+// Member의 메소드 프로토타입
 int _Member_initialize(Member*, size_t);    // 구조체 초기화(ID 부여)
 int _Member_setName(Member*, const char*);  // name 설정 함수
 int _Member_setTel(Member*, const char*);   // tel 설정 함수
@@ -63,22 +63,26 @@ MemberStatus _Member_getStatus(Member*);    // status 반환 함수
 
 int _Member_checkPW(Member*, const char*);   // PW 확인 함수, 이상이 없으면 0 반환
 
-// Transaction의 메소드 구현
+// Transaction의 메소드 프로토타입
 int _Transaction_initialize(Transaction*);  // Transaction의 초기화 함수
 int _Transaction_setItem(Transaction*, TimeStruct, size_t, size_t, int, const char*);   // Transaction의 값 설정
+int _Transaction_copy(Transaction*, Transaction*);  // Transcation의 복사 함수
 
-// Ledger의 메소드 구현
+// Ledger의 메소드 프로토타입
+int _Ledger_initialize(Ledger*);    // 구조체 초기화(동적 할당)
+
 int _Ledger_Withdraw(Ledger*, Member*, int, const char*, const char*);  // 출금 기능
 int _Ledger_Deposit(Ledger*, Member*, int, const char*);    // 입금 기능 구현
 int _Ledger_Write(Ledger*, size_t, int, const char*);   // 원장 기록 기능 구현
+int _Ledger_Write_Transaction(Ledger*, Transaction*);   // 원장 기록 기능 구현(복사 전용)
 int _Ledger_sizeCheck(Ledger*); // 원장의 길이의 여유분이 부족한 경우 메모리를 다시 할당받음
 
-Ledger _Ledger_Search_Member_ID(Ledger*, size_t);   // 검색 기능 구현
-Ledger _Ledger_Search_Member_Ptr(Ledger, Member*);  // 검색 기능 구현
+Ledger _Ledger_Search_Member(Ledger*, size_t);   // 검색 기능 구현
+inline Ledger _Ledger_Search_Member_Ptr(Ledger*, Member*);  // 검색 기능 구현
 
+int _Ledger_Balance(Ledger*);   // 원장 상의 잔액 조회
 
-
-
+// 메소드 구현부
 
 int _Member_initialize(Member* memberPtr, size_t ID)
 {
@@ -176,6 +180,24 @@ int _Transaction_setItem(Transaction* transactionPtr, TimeStruct time, size_t me
     return 0;
 }
 
+int _Transaction_copy(Transaction* _dst, Transaction* _src)
+{
+    _dst->time = _src->time;
+    _dst->memberID = _src->memberID;
+    _dst->transactionID = _dst->transactionID;
+    _dst->amount = _src->amount;
+    strcpy(_dst->comment, _src->comment);
+    return 0;
+}
+
+int _Ledger_initialize(Ledger* ledgerPtr)
+{
+    memset(ledgerPtr, 0, sizeof(Ledger));
+    ledgerPtr->trasnactionList = (Transaction*)malloc(SIZE_OF_LEDGER_ALLOCATE*sizeof(Transaction));
+    ledgerPtr->ledgerMaxLen = SIZE_OF_LEDGER_ALLOCATE;
+    return 0;
+}
+
 int _Ledger_Withdraw(Ledger* ledgerPtr, Member* memberPtr, int amount, const char* PW, const char* comment)
 {
     if (_Member_checkPW(memberPtr, PW))
@@ -214,14 +236,19 @@ int _Ledger_Write(Ledger* ledgerPtr, size_t memberID, int amount, const char* co
     }    
 }
 
+int _Ledger_Write_Transaction(Ledger* ledgerPtr, Transaction* transactionPtr)
+{
+    _Ledger_sizeCheck(ledgerPtr);
+    Transaction* targetTransaction = &(ledgerPtr->trasnactionList[ledgerPtr->ledgerLen]);
+
+}
+
 int _Ledger_sizeCheck(Ledger* ledgerPtr)
 {
     if (ledgerPtr->ledgerLen == ledgerPtr->ledgerMaxLen)
     {
         // ledger에 여유분이 없는 경우 메모리를 다시 할당받아옴
         ledgerPtr = (Ledger*)realloc(ledgerPtr, ledgerPtr->ledgerMaxLen + SIZE_OF_LEDGER_ALLOCATE);
-        ledgerPtr->ledgerMaxLen += SIZE_OF_LEDGER_ALLOCATE;
-
         ledgerPtr->ledgerMaxLen += SIZE_OF_LEDGER_ALLOCATE;
         for (size_t i = ledgerPtr->ledgerLen; i < ledgerPtr->ledgerMaxLen; ++i)
         {
@@ -232,7 +259,34 @@ int _Ledger_sizeCheck(Ledger* ledgerPtr)
     return 0;
 }
 
-Ledger _Ledger_Search_Member_ID(Ledger* ledgerPtr, size_t memberID)
+Ledger _Ledger_Search_Member(Ledger* ledgerPtr, size_t memberID)
 {
+    Ledger returnLedger;
+    _Ledger_initialize(&returnLedger);
+    Transaction* transactionPtr = ledgerPtr->trasnactionList;
+    for (size_t i = 0; i < ledgerPtr->ledgerLen; ++i)
+    {
+        // ledgerPtr의 기록 중에서 memberID와 일치하는 것이 있으면 returnLedger에 기록함
+        if (transactionPtr->memberID == memberID)
+        {
+            _Ledger_Write_Transaction(&returnLedger, &transactionPtr[i]);
+        }
+    }
+    return returnLedger;
+}
 
+inline Ledger _Ledger_Search_Member_Ptr(Ledger* ledgerPtr, Member* memberPtr)
+{
+    return _Ledger_Search_Member(ledgerPtr, memberPtr->ID);
+}
+
+int _Ledger_Balance(Ledger* ledgerPtr)
+{
+    int balance = 0;
+    Transaction* transactionPtr = ledgerPtr->trasnactionList;
+    for (size_t i = 0; i < ledgerPtr->ledgerLen; ++i)
+    {
+        balance += transactionPtr[i].amount;
+    }
+    return balance;
 }
