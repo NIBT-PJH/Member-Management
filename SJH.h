@@ -24,11 +24,11 @@ typedef struct tm TimeStruct;
 // 이용자의 정보를 저장함
 typedef struct _Member
 {
-    char* name[SIZE_OF_MEMBER_NAME];
-    char* tel[SIZE_OF_MEMBER_TEL];
+    char name[SIZE_OF_MEMBER_NAME];
+    char tel[SIZE_OF_MEMBER_TEL];
     MemberStatus status;  // 이용자의 현재 상태를 나타냄
     size_t ID;  // 이용자의 ID를 저장함.
-    char* PW[SIZE_OF_MEMBER_PW];    // 이용자의 PW를 저장함.
+    char PW[SIZE_OF_MEMBER_PW];    // 이용자의 PW를 저장함.
 }Member;
 
 // 거래 내역의 한 행을 구성함.
@@ -38,7 +38,7 @@ typedef struct _Transaction
     size_t memberID;    // 이용자의 ID를 저장함
     size_t transactionID;   // 해당 거래의 ID를 저장함
     int amount; // 거래금액을 나타냄
-    char* comment[SIZE_OF_TRANSACTION_COMMENT];  // 적요 항목을 저장
+    char comment[SIZE_OF_TRANSACTION_COMMENT];  // 적요 항목을 저장
 }Transaction;
 
 // 거래 내역 전반을 구성함
@@ -215,7 +215,7 @@ int _Ledger_Deposit(Ledger* ledgerPtr, Member* memberPtr, int amount, const char
 int _Ledger_Write(Ledger* ledgerPtr, size_t memberID, int amount, const char* comment)
 {
     _Ledger_sizeCheck(ledgerPtr);
-    Transaction* targetTransaction = &ledgerPtr->trasnactionList[ledgerPtr->ledgerLen;
+    Transaction* targetTransaction = &ledgerPtr->trasnactionList[ledgerPtr->ledgerLen];
     
     time_t curTime;
     TimeStruct curTimeStruct;
@@ -248,12 +248,12 @@ int _Ledger_sizeCheck(Ledger* ledgerPtr)
     if (ledgerPtr->ledgerLen == ledgerPtr->ledgerMaxLen)
     {
         // ledger에 여유분이 없는 경우 메모리를 다시 할당받아옴
-        ledgerPtr = (Ledger*)realloc(ledgerPtr, ledgerPtr->ledgerMaxLen + SIZE_OF_LEDGER_ALLOCATE);
+        ledgerPtr->trasnactionList = (Transaction*)realloc(ledgerPtr, ledgerPtr->ledgerMaxLen + SIZE_OF_LEDGER_ALLOCATE);
         ledgerPtr->ledgerMaxLen += SIZE_OF_LEDGER_ALLOCATE;
         for (size_t i = ledgerPtr->ledgerLen; i < ledgerPtr->ledgerMaxLen; ++i)
         {
             // 새로 할당받은 값들에 대해 값을 초기화함
-            _Transaction_initialize(&ledgerPtr[i]);
+            _Transaction_initialize(&(ledgerPtr->trasnactionList[i]));
         }
     }
     return 0;
