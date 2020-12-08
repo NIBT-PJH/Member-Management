@@ -2,7 +2,10 @@
 #include<stdlib.h>
 #include<Windows.h>
 #include<string.h>
+#include<time.h>
+
 #define Maximum_member 100
+#define  MAXIMUM_HISTORY_DATA 100
 
 typedef struct _membership
 {
@@ -11,18 +14,26 @@ typedef struct _membership
 	int point;
 }Membership, MS;
 
+typedef struct _history_detail
+{
+	int IO;
+	int point;
+}History, HD;
+
+enum MENU {point_in=1,point_out=2,new_member=1,clear_member=2,dp_member=3,history=4,manage_end=4,manage_member=3};
+
 int mainMenu();  // 메뉴번호를 return해주는 함수 선택된
 void Newmember(bool*, Membership*);
 // 새로운 고객 정보을 Membership(struct)에 저장해주는함수, bool* OX를 flag로 이용하여 배열의 할당 안된 부분에 할당
 void MemberDPALL(bool*, Membership*);
 // Membership(struct)형태에 저장된 회원 정보를 출력해주는 함수
-void pointIn(MS*);
+void pointIn(MS*, HD** hisARR, bool** HOX);
 // strcmp를 이용하여 입력된 전화번호와 저장된 전화번호를 대조하여 Membership(struct),MS(struct)에서 해당 전화번호의 위치를 찾아 포인트 추가
-void pointOut(MS*);
+void pointOut(MS*, HD** hisARR, bool** HOX);
 // void(MS*)와 동일하지만 포인트 차감 원리 동일
-void Memberclear(bool*, MS*);
+void Memberclear(bool*, MS*, HD** hisARR, bool** HOX);
 // // strcmp를 이용하여 입력된 전화번호와 저장된 전화번호를 대조하여 Membership(struct),MS(struct)에서 해당 전화번호의 위치를 찾아 회원정보 말소
-
+void history_make(int TYP, int point, int, HD**,bool**);
 
 
 
@@ -43,6 +54,24 @@ int main()
 		memset(&OX[i], 0, sizeof(bool));
 	}
 	//배열을 메모리에 할당하고 초기화
+	History** hisARR;
+	hisARR = (HD**)malloc(8 * Maximum_member);
+	for (int i = 0; i < Maximum_member; i++)
+	{
+		hisARR[i] = (HD*)malloc(sizeof(HD) * MAXIMUM_HISTORY_DATA);
+		memset(&hisARR[i], 0, sizeof(HD));
+	}
+	// 포인터 형태의 2중배열을 만들고 메모리를 할당 및 초기화
+	bool** HOX;
+	HOX = (bool**)malloc(8 * Maximum_member);
+	for (int i = 0; i < Maximum_member; i++)
+	{
+		HOX[i] = (bool*)malloc(sizeof(bool) * MAXIMUM_HISTORY_DATA);
+		memset(&HOX[i], 0, sizeof(bool));
+	}
+	// 포인터 형태의 2중배열을 만들고 메모리를 할당 및 초기화 , 내역의 flag로 활용되는 배열
+
+
 	while (ERR == 10101)  // 기본적으로 작동하는 함수는 모두 이 while문에서 작동 , 종료시에 ERR값을 바꿔 종료
 	{
 		system("cls");
@@ -53,13 +82,13 @@ int main()
 		case 0: // 포인트 적립
 		{
 			system("cls");
-			pointIn(list);
+			pointIn(list,hisARR,HOX);
 			break;
 		}//case
 		case 1: // 포인트 사용
 		{
 			system("cls");
-			pointOut(list);
+			pointOut(list,hisARR,HOX);
 			break;
 		}//case
 		case 2: // 신규 고객
@@ -71,7 +100,7 @@ int main()
 		case 3: // 고객 말소
 		{
 			system("cls");
-			Memberclear(OX, list);
+			Memberclear(OX, list,hisARR,HOX);
 			break;
 		}//case
 		case 4: // 고객 조회
@@ -115,7 +144,7 @@ int mainMenu()  // 메뉴를 선택하도록 하는 함수 선택된 값에 따라서 다른 정수값 반
 	int cal = 10101;
 	printf("\t\t   고객 포인트 관리\n");
 	printf("=============================================================\n");
-	printf("\t적립     : 1 \t\t사용 : 2\n\t고객관리 : 3\t        종료 : 4\n");
+	printf("\t적립     : %d \t\t사용 : %d\n\t고객관리 : %d\t        종료 : %d\n",point_in,point_out,manage_member,manage_end);
 	// 0=적립, 1=사용, 2=신규 고객, 3=고객 삭제, 4=고객조회, 5=이용내역, 10=종료
 	printf("=============================================================\n");
 	printf(" 메뉴 번호 : ");
@@ -140,7 +169,7 @@ int mainMenu()  // 메뉴를 선택하도록 하는 함수 선택된 값에 따라서 다른 정수값 반
 		system("cls");
 		printf("\t\t\t 고객 관리\n");
 		printf("=============================================================\n");
-		printf("\t신규     : 1 \t\t삭제 : 2\n\t고객조회 : 3\t        내역 : 4\n");
+		printf("\t신규     : %d \t\t삭제 : %d\n\t고객조회 : %d\t        내역 : %d\n",new_member,clear_member,dp_member,history);
 		printf("=============================================================\n");
 		printf(" 메뉴 번호 : ");
 		scanf_s("%d", &cal2);
@@ -225,7 +254,7 @@ void MemberDPALL(bool* OX, Membership* list)  //저장된 모든 회원정보 저장
 
 }
 
-void pointIn(MS* list)
+void pointIn(MS* list, HD** hisARR, bool** HOX)
 {
 	char innum[20];
 	int Ival = 10101;
@@ -237,7 +266,7 @@ void pointIn(MS* list)
 	scanf_s("%s", &innum, sizeof(innum));
 	for (int i = 0; i < Maximum_member; i++)  // 입력된 전화번호와 저장된 회원의 전화번호를 대조 strcmp함수 이용
 	{
-		int cal = strcmp(innum, list[i].name);
+		int cal = strcmp(innum, list[i].tel);
 		if (cal == 0)  //같으면 Ival의 값을 i로 저장하여 MS* 구조체에서의 위치 확인(원소번호)
 		{
 			Ival = i;
@@ -263,6 +292,7 @@ void pointIn(MS* list)
 		printf("회원 이름 : %s\n 적립할 포인트 : ", list[Ival].name);
 		scanf_s("%d", &pointval);
 		list[Ival].point += pointval;
+		history_make(1,pointval,Ival,hisARR,HOX);
 		system("cls");
 		printf("\t\t  포인트 적립\n");
 		printf("=============================================================\n");
@@ -271,7 +301,7 @@ void pointIn(MS* list)
 	}
 
 }
-void pointOut(MS* list)  // void pointIn(MS* list)와 동일 포인트 가감만 다름
+void pointOut(MS* list, HD** hisARR, bool** HOX)  // void pointIn(MS* list)와 동일 포인트 가감만 다름
 {
 	char innum[20];
 	int Ival = 10101;
@@ -283,7 +313,7 @@ void pointOut(MS* list)  // void pointIn(MS* list)와 동일 포인트 가감만 다름
 	scanf_s("%s", &innum, sizeof(innum));
 	for (int i = 0; i < Maximum_member; i++)
 	{
-		int cal = strcmp(innum, list[i].name);
+		int cal = strcmp(innum, list[i].tel);
 		if (cal == 0)
 		{
 			Ival = i;
@@ -309,6 +339,7 @@ void pointOut(MS* list)  // void pointIn(MS* list)와 동일 포인트 가감만 다름
 		printf("회원 이름 : %s\n 차감할 포인트 : ", list[Ival].name);
 		scanf_s("%d", &pointval);
 		list[Ival].point -= pointval;
+		history_make(0, pointval, Ival, hisARR, HOX);
 		system("cls");
 		printf("\t\t  포인트 적립\n");
 		printf("=============================================================\n");
@@ -318,7 +349,7 @@ void pointOut(MS* list)  // void pointIn(MS* list)와 동일 포인트 가감만 다름
 
 }
 
-void Memberclear(bool* OX, MS* list)
+void Memberclear(bool* OX, MS* list, HD** hisARR, bool** HOX)
 {
 	char innum[20];
 	int Ival = 10101;
@@ -331,7 +362,7 @@ void Memberclear(bool* OX, MS* list)
 	scanf_s("%s", &innum, sizeof(innum));
 	for (int i = 0; i < Maximum_member; i++)  // void pointIn(MS* list),void pointOut(MS* list) 함수와 동일한 부문 
 	{
-		int cal = strcmp(innum, list[i].name);
+		int cal = strcmp(innum, list[i].tel);
 		if (cal == 0)
 		{
 			Ival = i;
@@ -361,6 +392,9 @@ void Memberclear(bool* OX, MS* list)
 		{
 			memset(&list[Ival], 0, sizeof(MS));
 			memset(&list[Ival], 0, sizeof(bool));
+			OX[Ival] = FALSE;
+			memset(&HOX[Ival], 0, sizeof(bool)*MAXIMUM_HISTORY_DATA);
+			memset(&hisARR[Ival], 0, sizeof(HD) * MAXIMUM_HISTORY_DATA);
 			system("cls");
 			printf("\t\t  회원 탈퇴\n");
 			printf("=============================================================\n");
@@ -377,4 +411,26 @@ void Memberclear(bool* OX, MS* list)
 			Sleep(2000);
 		}
 	}
+}
+
+
+void history_make(int TYP, int point, int MN, HD** hisARR, bool** HOX)
+{
+	int val = 0;
+	for (int i = 0; i < Maximum_member; i++)  // flag로 사용되는 bool* OX 배열을 확인하여 MS* list배열의 미사용 원소를 확인하여 int val에 저장
+	{
+		val = i;
+		if (HOX[MN][i] == 0)
+		{
+			break;
+		}
+		else
+		{
+
+		}
+	}
+	HOX[MN][val] = TRUE;
+	hisARR[MN][val].IO = TYP;
+	hisARR[MN][val].point = point;
+
 }
