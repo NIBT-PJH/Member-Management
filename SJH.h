@@ -9,6 +9,7 @@
 #define SIZE_OF_MEMBER_PW 4
 #define SIZE_OF_TRANSACTION_COMMENT 20
 #define SIZE_OF_LEDGER_ALLOCATE 20
+#define SIZE_OF_MEMBERLIST_ALLOCATE 10
 
 // 이용자의 현재 상태를 나타냄
 typedef enum _MemberStatus
@@ -44,13 +45,21 @@ typedef struct _Transaction
 // 거래 내역 전반을 구성함
 typedef struct _Ledger
 {
-    Transaction* trasnactionList;   // 거래 내역을 저장함
-    size_t ledgerLen;   // 거래 내역의 개수를 저장함
-    size_t ledgerMaxLen;    // 할당받은 원장의 길이를 저장함
+    Transaction* trasnactionPtr;    // 거래 내역을 저장함
+    size_t len; // 거래 내역의 개수를 저장함
+    size_t maxlen;  // 할당받은 원장의 길이를 저장함
 }Ledger;
 
+// Member들을 저장할 List
+typedef struct _MemberList
+{
+    Member* memberPtr;  // Member를 저장함
+    size_t len; // Member의 개수를 저장함
+    size_t maxlen;  // 할당받은 길이를 저장함
+}MemberList;
+
 // Member의 메소드 프로토타입
-int _Member_initialize(Member*, size_t);    // 구조체 초기화(ID 부여)
+int _Member_Initialize(Member*, size_t);    // 구조체 초기화(ID 부여)
 int _Member_setName(Member*, const char*);  // name 설정 함수
 int _Member_setTel(Member*, const char*);   // tel 설정 함수
 int _Member_setPW(Member*, const char*);    // PW 설정 함수
@@ -64,12 +73,12 @@ MemberStatus _Member_getStatus(Member*);    // status 반환 함수
 int _Member_checkPW(Member*, const char*);   // PW 확인 함수, 이상이 없으면 0 반환
 
 // Transaction의 메소드 프로토타입
-int _Transaction_initialize(Transaction*);  // Transaction의 초기화 함수
+int _Transaction_Initialize(Transaction*);  // Transaction의 초기화 함수
 int _Transaction_setItem(Transaction*, TimeStruct, size_t, size_t, int, const char*);   // Transaction의 값 설정
 int _Transaction_copy(Transaction*, Transaction*);  // Transcation의 복사 함수
 
 // Ledger의 메소드 프로토타입
-int _Ledger_initialize(Ledger*);    // 구조체 초기화(동적 할당)
+int _Ledger_Initialize(Ledger*);    // 구조체 초기화(동적 할당)
 
 int _Ledger_Withdraw(Ledger*, Member*, int, const char*, const char*);  // 출금 기능
 int _Ledger_Deposit(Ledger*, Member*, int, const char*);    // 입금 기능 구현
@@ -82,9 +91,15 @@ inline Ledger _Ledger_Search_Member_Ptr(Ledger*, Member*);  // 검색 기능 구
 
 int _Ledger_Balance(Ledger*);   // 원장 상의 잔액 조회
 
+// MemberList의 메소드 프로토타입
+int _MemberList_Initialize(MemberList*);    // 구조체 초기화
+
+int _MemberList_append(MemberList*, Member); // 항목 추가
+int _MemberList_sizeCheck(MemberList*); // 길이의 여유분이 부족한 경우 메모리를 다시 할당받음
+
 // 메소드 구현부
 
-int _Member_initialize(Member* memberPtr, size_t ID)
+int _Member_Initialize(Member* memberPtr, size_t ID)
 {
     memset(memberPtr, 0, sizeof(Member));
     memberPtr->ID = ID;
@@ -160,7 +175,7 @@ int _Member_checkPW(Member* memberPtr, const char* PW)
     return strcmp(memberPtr->PW, PW);   // PW의 비교 결과를 return
 }
 
-int _Transaction_initialize(Transaction* transactionPtr)
+int _Transaction_Initialize(Transaction* transactionPtr)
 {
     memset(transactionPtr, 0, sizeof(Transaction));
     return 0;
@@ -190,11 +205,11 @@ int _Transaction_copy(Transaction* _dst, Transaction* _src)
     return 0;
 }
 
-int _Ledger_initialize(Ledger* ledgerPtr)
+int _Ledger_Initialize(Ledger* ledgerPtr)
 {
     memset(ledgerPtr, 0, sizeof(Ledger));
-    ledgerPtr->trasnactionList = (Transaction*)malloc(SIZE_OF_LEDGER_ALLOCATE*sizeof(Transaction));
-    ledgerPtr->ledgerMaxLen = SIZE_OF_LEDGER_ALLOCATE;
+    ledgerPtr->trasnactionPtr = (Transaction*)malloc(SIZE_OF_LEDGER_ALLOCATE*sizeof(Transaction));
+    ledgerPtr->maxlen = SIZE_OF_LEDGER_ALLOCATE;
     return 0;
 }
 
@@ -215,23 +230,23 @@ int _Ledger_Deposit(Ledger* ledgerPtr, Member* memberPtr, int amount, const char
 int _Ledger_Write(Ledger* ledgerPtr, size_t memberID, int amount, const char* comment)
 {
     _Ledger_sizeCheck(ledgerPtr);
-    Transaction* targetTransaction = &ledgerPtr->trasnactionList[ledgerPtr->ledgerLen];
+    Transaction* targetTransaction = &(ledgerPtr->trasnactionPtr[ledgerPtr->len]);
     
     time_t curTime;
     TimeStruct curTimeStruct;
     time(&curTime);
     localtime_s(&curTimeStruct, &curTime);
 
-    if (!_Transaction_setItem(targetTransaction, curTimeStruct, memberID, ledgerPtr->ledgerLen, amount, comment))
+    if (!_Transaction_setItem(targetTransaction, curTimeStruct, memberID, ledgerPtr->len, amount, comment))
     {
         // 정상적으로 입력된 경우 종료
-        ++(ledgerPtr->ledgerLen);
+        ++(ledgerPtr->len);
         return 0;
     }
     else
     {
         // 정상적으로 입력되지 않은 경우 값을 초기화함
-        _Transaction_initialize(targetTransaction);
+        _Transaction_Initialize(targetTransaction);
         return 1;
     }    
 }
@@ -239,21 +254,21 @@ int _Ledger_Write(Ledger* ledgerPtr, size_t memberID, int amount, const char* co
 int _Ledger_Write_Transaction(Ledger* ledgerPtr, Transaction* transactionPtr)
 {
     _Ledger_sizeCheck(ledgerPtr);
-    Transaction* targetTransaction = &(ledgerPtr->trasnactionList[ledgerPtr->ledgerLen]);
+    Transaction* targetTransaction = &(ledgerPtr->trasnactionPtr[ledgerPtr->len]);
 
 }
 
 int _Ledger_sizeCheck(Ledger* ledgerPtr)
 {
-    if (ledgerPtr->ledgerLen == ledgerPtr->ledgerMaxLen)
+    if (ledgerPtr->len == ledgerPtr->maxlen)
     {
         // ledger에 여유분이 없는 경우 메모리를 다시 할당받아옴
-        ledgerPtr->trasnactionList = (Transaction*)realloc(ledgerPtr, ledgerPtr->ledgerMaxLen + SIZE_OF_LEDGER_ALLOCATE);
-        ledgerPtr->ledgerMaxLen += SIZE_OF_LEDGER_ALLOCATE;
-        for (size_t i = ledgerPtr->ledgerLen; i < ledgerPtr->ledgerMaxLen; ++i)
+        ledgerPtr->trasnactionPtr = (Transaction*)realloc(ledgerPtr->trasnactionPtr, (ledgerPtr->maxlen + SIZE_OF_LEDGER_ALLOCATE)*sizeof(Transaction));
+        ledgerPtr->maxlen += SIZE_OF_LEDGER_ALLOCATE;
+        for (size_t i = ledgerPtr->len; i < ledgerPtr->maxlen; ++i)
         {
             // 새로 할당받은 값들에 대해 값을 초기화함
-            _Transaction_initialize(&(ledgerPtr->trasnactionList[i]));
+            _Transaction_Initialize(&(ledgerPtr->trasnactionPtr[i]));
         }
     }
     return 0;
@@ -262,9 +277,9 @@ int _Ledger_sizeCheck(Ledger* ledgerPtr)
 Ledger _Ledger_Search_Member(Ledger* ledgerPtr, size_t memberID)
 {
     Ledger returnLedger;
-    _Ledger_initialize(&returnLedger);
-    Transaction* transactionPtr = ledgerPtr->trasnactionList;
-    for (size_t i = 0; i < ledgerPtr->ledgerLen; ++i)
+    _Ledger_Initialize(&returnLedger);
+    Transaction* transactionPtr = ledgerPtr->trasnactionPtr;
+    for (size_t i = 0; i < ledgerPtr->len; ++i)
     {
         // ledgerPtr의 기록 중에서 memberID와 일치하는 것이 있으면 returnLedger에 기록함
         if (transactionPtr->memberID == memberID)
@@ -283,10 +298,51 @@ inline Ledger _Ledger_Search_Member_Ptr(Ledger* ledgerPtr, Member* memberPtr)
 int _Ledger_Balance(Ledger* ledgerPtr)
 {
     int balance = 0;
-    Transaction* transactionPtr = ledgerPtr->trasnactionList;
-    for (size_t i = 0; i < ledgerPtr->ledgerLen; ++i)
+    Transaction* transactionPtr = ledgerPtr->trasnactionPtr;
+    for (size_t i = 0; i < ledgerPtr->len; ++i)
     {
         balance += transactionPtr[i].amount;
     }
     return balance;
+}
+
+int _MemberList_Initialize(MemberList* memberlistPtr)
+{
+    memset(memberlistPtr, 0, sizeof(MemberList));
+    memberlistPtr->memberPtr = (Member*)malloc(SIZE_OF_MEMBERLIST_ALLOCATE*sizeof(Member));
+    memberlistPtr->maxlen = SIZE_OF_MEMBERLIST_ALLOCATE;
+    for (size_t i = 0; i < memberlistPtr->maxlen; ++i)
+    {
+        // Member 값들에 대해 ID를 부여함.
+        _Member_Initialize(&(memberlistPtr->memberPtr[i]), i);
+    }
+    return 0;
+}
+
+// ID는 복사하지 않고, 원래 List에 부여된 ID를 사용함.
+int _MemberList_append(MemberList* memberlistPtr, Member member)
+{
+    _MemberList_sizeCheck(memberlistPtr);
+    Member* targetMember = &(memberlistPtr->memberPtr[memberlistPtr->len]);
+    strcpy(targetMember->name, member.name);
+    strcpy(targetMember->PW, member.PW);
+    strcpy(targetMember->tel, member.tel);
+    targetMember->status = member.status;
+    ++(memberlistPtr->len);
+    return 0;
+}
+
+int _MemberList_sizeCheck(MemberList* memberlistPtr)
+{
+    if (memberlistPtr->len == memberlistPtr->maxlen)
+    {
+        // memberlist에 여유분이 없는 경우 메모리를 다시 할당받아옴
+        memberlistPtr->memberPtr = (Member*)realloc(memberlistPtr->memberPtr, (memberlistPtr->maxlen + SIZE_OF_MEMBERLIST_ALLOCATE)*sizeof(Member));
+        memberlistPtr->maxlen += SIZE_OF_MEMBERLIST_ALLOCATE;
+        for (size_t i = memberlistPtr->len; i < memberlistPtr->maxlen; ++i)
+        {
+            // 새로 할당받은 값들에 대해 값을 초기화함
+            _Member_Initialize(&(memberlistPtr->memberPtr[i]), i);
+        }
+    }
 }
