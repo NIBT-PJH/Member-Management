@@ -237,6 +237,10 @@ int _Ledger_Write(Ledger* ledgerPtr, size_t memberID, int amount, const char* co
     time(&curTime);
     localtime_s(&curTimeStruct, &curTime);
 
+    char buff_time[30];
+    asctime_s(buff_time, 30, &curTimeStruct);
+    printf("Current time : %s\n", buff_time);
+
     if (!_Transaction_setItem(targetTransaction, curTimeStruct, memberID, ledgerPtr->len, amount, comment))
     {
         // 정상적으로 입력된 경우 종료
@@ -255,7 +259,10 @@ int _Ledger_Write_Transaction(Ledger* ledgerPtr, Transaction* transactionPtr)
 {
     _Ledger_sizeCheck(ledgerPtr);
     Transaction* targetTransaction = &(ledgerPtr->trasnactionPtr[ledgerPtr->len]);
+    _Transaction_copy(targetTransaction, transactionPtr);
+    ++(ledgerPtr->len);
 
+    return 0;
 }
 
 int _Ledger_sizeCheck(Ledger* ledgerPtr)

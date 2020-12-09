@@ -74,9 +74,9 @@ int main()
         default:
             system("cls");
             printBar();
-            for (size_t i = 0; i < 5; ++i)
+            for (size_t i = 0; i < 3; ++i)
             {
-                printf("Shut down after %d seconds\n", 5-i);
+                printf("Shut down after %d seconds\n", 3-i);
                 Sleep(1000);
             }            
             return 0;
@@ -288,6 +288,7 @@ int func_JOIN_MEMBER(MemberList* memberlistPtr, Ledger* ledgerPtr)
     _Member_setPW(&newMember, buff_PW);
 
     _MemberList_append(memberlistPtr, newMember);
+    printf("Member added successfully.\n");
 
     system("pause");
     return 0;
@@ -372,7 +373,7 @@ int func_VIEW_HISTORY(MemberList* memberlistPtr, Ledger* ledgerPtr)
     char buff_tel[SIZE_OF_MEMBER_TEL];
     printf("View History of Client\n");
     printBar();
-    printf("Cilent's TEL. No :");
+    printf("Cilent's TEL. No : ");
     scanf_s("%s", &buff_tel, SIZE_OF_MEMBER_TEL);
     
     size_t targetIdx = 0;
@@ -403,8 +404,8 @@ int func_VIEW_HISTORY(MemberList* memberlistPtr, Ledger* ledgerPtr)
     printBar();
     for (size_t i = 0; i < resLedger.len; ++i)
     {
-        asctime_s(&buff_time, 20, &(resLedger.trasnactionPtr[i].time));
-        printf("%s\t%d points\t", buff_time, (resLedger.trasnactionPtr[i].amount));
+        asctime_s(buff_time, 30, &(resLedger.trasnactionPtr[i].time));
+        printf("%s\t%d points\n", buff_time, (resLedger.trasnactionPtr[i].amount));
     }
     printBar();
     printf("Total Points : %d\n", _Ledger_Balance(&resLedger));
@@ -455,12 +456,12 @@ int func_VIEW_LEDGER(MemberList* memberlistPtr, Ledger* ledgerPtr)
     printf("maxlen of ledger : %d\n", ledgerPtr->maxlen);
     printBar();
 
-    char buff_time[20];
+    char buff_time[30];
 
     for (size_t i = 0; i < ledgerPtr->len; ++i)
     {
         printBar();
-        asctime_s(&buff_time, 20, &(ledgerPtr->trasnactionPtr[i].time));
+        asctime_s(buff_time, 30, &(ledgerPtr->trasnactionPtr[i].time));
         printf("Time : %s\n", buff_time);
         printf("Amount : %d\n", ledgerPtr->trasnactionPtr[i].amount);
     }
