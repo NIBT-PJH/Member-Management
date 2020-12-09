@@ -87,7 +87,7 @@ int _Ledger_Write_Transaction(Ledger*, Transaction*);   // 원장 기록 기능 
 int _Ledger_sizeCheck(Ledger*); // 원장의 길이의 여유분이 부족한 경우 메모리를 다시 할당받음
 
 Ledger _Ledger_Search_Member(Ledger*, size_t);   // 검색 기능 구현
-inline Ledger _Ledger_Search_Member_Ptr(Ledger*, Member*);  // 검색 기능 구현
+Ledger _Ledger_Search_Member_Ptr(Ledger*, Member*);  // 검색 기능 구현
 
 int _Ledger_Balance(Ledger*);   // 원장 상의 잔액 조회
 
@@ -282,7 +282,7 @@ Ledger _Ledger_Search_Member(Ledger* ledgerPtr, size_t memberID)
     for (size_t i = 0; i < ledgerPtr->len; ++i)
     {
         // ledgerPtr의 기록 중에서 memberID와 일치하는 것이 있으면 returnLedger에 기록함
-        if (transactionPtr->memberID == memberID)
+        if (transactionPtr[i].memberID == memberID)
         {
             _Ledger_Write_Transaction(&returnLedger, &transactionPtr[i]);
         }
@@ -290,7 +290,7 @@ Ledger _Ledger_Search_Member(Ledger* ledgerPtr, size_t memberID)
     return returnLedger;
 }
 
-inline Ledger _Ledger_Search_Member_Ptr(Ledger* ledgerPtr, Member* memberPtr)
+Ledger _Ledger_Search_Member_Ptr(Ledger* ledgerPtr, Member* memberPtr)
 {
     return _Ledger_Search_Member(ledgerPtr, memberPtr->ID);
 }
