@@ -219,12 +219,12 @@ int _Ledger_Withdraw(Ledger* ledgerPtr, Member* memberPtr, int amount, const cha
     {
         return 1;   // PW가 실제와 다른 경우 에러
     }
-    return _Ledger_Write(ledgerPtr, _Member_getID(memberPtr), amount, comment);
+    return _Ledger_Write(ledgerPtr, _Member_getID(memberPtr), amount*-1, comment);
 }
 
 int _Ledger_Deposit(Ledger* ledgerPtr, Member* memberPtr, int amount, const char* comment)
 {
-    return _Ledger_Write(ledgerPtr, _Member_getID(memberPtr), amount*-1, comment);
+    return _Ledger_Write(ledgerPtr, _Member_getID(memberPtr), amount, comment);
 }
 
 int _Ledger_Write(Ledger* ledgerPtr, size_t memberID, int amount, const char* comment)

@@ -133,7 +133,7 @@ MENU mainMenu()
     printf("Delete client : 2\n");
     printf("Display all cilent : 3\n");
     printf("Display client's history : 4\n");
-    prinft("View Ledger : 5\n");
+    printf("View Ledger : 5\n");
     printf("Exit : else\n");
     printBar();
     printf("Input menu number : ");
@@ -403,7 +403,7 @@ int func_VIEW_HISTORY(MemberList* memberlistPtr, Ledger* ledgerPtr)
     printBar();
     for (size_t i = 0; i < resLedger.len; ++i)
     {
-        asctime_s(buff_time, 20, &(resLedger.trasnactionPtr[i].time));
+        asctime_s(&buff_time, 20, &(resLedger.trasnactionPtr[i].time));
         printf("%s\t%d points\t", buff_time, (resLedger.trasnactionPtr[i].amount));
     }
     printBar();
@@ -452,6 +452,7 @@ int func_VIEW_LEDGER(MemberList* memberlistPtr, Ledger* ledgerPtr)
 {
     system("cls");
     printf("List of ledger\n");
+    printf("maxlen of ledger : %d\n", ledgerPtr->maxlen);
     printBar();
 
     char buff_time[20];
@@ -459,8 +460,9 @@ int func_VIEW_LEDGER(MemberList* memberlistPtr, Ledger* ledgerPtr)
     for (size_t i = 0; i < ledgerPtr->len; ++i)
     {
         printBar();
-        asctime_s(buff_time, 20, &(ledgerPtr->trasnactionPtr[i].time));
+        asctime_s(&buff_time, 20, &(ledgerPtr->trasnactionPtr[i].time));
         printf("Time : %s\n", buff_time);
+        printf("Amount : %d\n", ledgerPtr->trasnactionPtr[i].amount);
     }
 
     system("pause");
